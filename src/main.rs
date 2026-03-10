@@ -5,11 +5,13 @@ struct OperationCounter {
 }
 
 impl OperationCounter {
+    /// Returns the total number of operations (comparisons + swaps). 
     fn total(&self) -> usize {
         self.comparisons + self.swaps
     }
 }
 
+/// A simple bubble sort implementation that counts comparisons and swaps.
 fn bubble_sort(arr: &mut [i32], counter: &mut OperationCounter) {
     let n = arr.len();
 
@@ -48,6 +50,7 @@ impl InfinityAnalyzer {
         }
     }
 
+    /// Runs the sorting experiments for a range of input sizes and collects the operation counts.
     fn run_experiments(
         &self, start: usize, step: usize, count: usize,
     ) -> Vec<ExperimentPoint> {
@@ -67,6 +70,7 @@ impl InfinityAnalyzer {
         points
     }
 
+    /// Builds a new table of points where both n and operations are transformed to their logarithmic values.
     pub fn build_log_table(&self, points: &[ExperimentPoint]) -> Vec<ExperimentPoint> {
         points
             .iter()
@@ -77,6 +81,7 @@ impl InfinityAnalyzer {
             .collect()
     }
 
+    /// Computes the slope and intercept for the log-log linear regression.
     pub fn compute_log_log_lin_reg(
         &mut self, log_points: &[ExperimentPoint]
     ) -> Result<(f64, f64), String> {
@@ -102,11 +107,13 @@ impl InfinityAnalyzer {
         Ok((slope, intercept))
     }
 
+    /// Returns the estimated parameters α and C based on the computed slope and intercept.
     fn parameters_alpha_c(&self) -> (f64, f64) {
         (self.slope, 10f64.powf(self.intercept))
     }
 }
 
+/// Utility function to print the experiment results in a tabular format.
 fn print_table(points: &[ExperimentPoint]) {
     println!("N\tOperations");
     for p in points {
@@ -115,14 +122,17 @@ fn print_table(points: &[ExperimentPoint]) {
 }
 
 fn main() -> Result<(), String> {
+    // Create an instance of the InfinityAnalyzer with the bubble sort function.
     let mut analyzer = InfinityAnalyzer::new(bubble_sort);
     let points = analyzer.run_experiments(100, 100, 15);
     print_table(&points);
 
+    // Build the log-log table and compute the linear regression to estimate α and C.
     let log_points = analyzer.build_log_table(&points);
     analyzer.compute_log_log_lin_reg(&log_points)?;
     let (alpha, c) = analyzer.parameters_alpha_c();
 
+    // Print the estimated parameters.
     println!("\nEstimated parameters:");
     println!("C ≈ {}", c);
     println!("α ≈ {}", alpha);
