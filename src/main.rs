@@ -1,4 +1,4 @@
-#[derive(Default, Clone)]
+#[derive(Default)]
 struct OperationCounter {
     comparisons: usize,
     swaps: usize,
@@ -27,24 +27,24 @@ fn bubble_sort(arr: &mut [i32], counter: &mut OperationCounter) {
     }
 }
 
-#[derive(Clone)]
 struct ExperimentPoint {
     n: f64,
     operations: f64,
 }
 
-type SortFn = fn(&mut [i32], &mut OperationCounter);
-
 struct InfinityAnalyzer {
-    sort_fn: SortFn,
+    sort_fn: Box<dyn Fn(&mut [i32], &mut OperationCounter)>,
     intercept: f64,
     slope: f64,
 }
 
 impl InfinityAnalyzer {
-    fn new(sort_fn: SortFn) -> Self {
+    fn new<F>(sort_fn: F) -> Self
+    where
+        F: Fn(&mut [i32], &mut OperationCounter) + 'static,
+    {
         Self {
-            sort_fn,
+            sort_fn: Box::new(sort_fn),
             intercept: 0.0,
             slope: 0.0,
         }
@@ -71,14 +71,18 @@ impl InfinityAnalyzer {
     }
 
     /// Builds a new table of points where both n and operations are transformed to their logarithmic values.
-    pub fn build_log_table(&self, points: &[ExperimentPoint]) -> Vec<ExperimentPoint> {
-        points
+    pub fn build_log_table(&self, points: &[ExperimentPoint]) -> Result<Vec<ExperimentPoint>, String> {
+        if points.iter().any(|p| p.n == 0.0) 
+        || points.iter().any(|p| p.operations == 0.0) {
+            return Err("Cannot take log of zero or negative values n or operations".into());
+        }
+        Ok(points
             .iter()
             .map(|p| ExperimentPoint {
                 n: (p.n).log10(),
                 operations: (p.operations).log10(),
             })
-            .collect()
+            .collect())
     }
 
     /// Computes the slope and intercept for the log-log linear regression.
@@ -128,7 +132,7 @@ fn main() -> Result<(), String> {
     print_table(&points);
 
     // Build the log-log table and compute the linear regression to estimate α and C.
-    let log_points = analyzer.build_log_table(&points);
+    let log_points = analyzer.build_log_table(&points)?;
     analyzer.compute_log_log_lin_reg(&log_points)?;
     let (alpha, c) = analyzer.parameters_alpha_c();
 
